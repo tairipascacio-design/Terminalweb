@@ -1,0 +1,364 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Global Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'weroelmasaka@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidStringList(arr, maxItems) {
+      return arr is list && arr.size() <= maxItems && (
+        arr.size() == 0 || (arr[0] is string && arr[0].size() <= 64)
+      );
+    }
+
+    // --- Validation Blueprints (Anti-Update-Gap) ---
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'preferredRegion', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'preferredRegion', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == userId && data.uid == request.auth.uid && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.role is string && data.role == 'operator'
+        && data.preferredRegion is string && data.preferredRegion.size() >= 2 && data.preferredRegion.size() <= 32
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCloudNode(data) {
+      return data.keys().hasAll([
+          'ownerId', 'name', 'provider', 'plan', 'region', 'osImage',
+          'ipv4', 'privateIp', 'vcpu', 'ramGb', 'diskGb', 'status',
+          'uptime247', 'monthlyCostUsd', 'workload', 'tags', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'name', 'provider', 'plan', 'region', 'osImage',
+          'ipv4', 'privateIp', 'vcpu', 'ramGb', 'diskGb', 'status',
+          'uptime247', 'monthlyCostUsd', 'workload', 'tags', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 80
+        && data.provider is string && data.provider in ['hetzner', 'digitalocean', 'warrdcore-cloud']
+        && data.plan is string && data.plan.size() >= 2 && data.plan.size() <= 48
+        && data.region is string && data.region.size() >= 2 && data.region.size() <= 48
+        && data.osImage is string && data.osImage.size() >= 2 && data.osImage.size() <= 64
+        && data.ipv4 is string && data.ipv4.size() >= 7 && data.ipv4.size() <= 45
+        && data.privateIp is string && data.privateIp.size() >= 7 && data.privateIp.size() <= 45
+        && data.vcpu is number && data.vcpu >= 1 && data.vcpu <= 256
+        && data.ramGb is number && data.ramGb >= 1 && data.ramGb <= 2048
+        && data.diskGb is number && data.diskGb >= 10 && data.diskGb <= 32768
+        && data.status is string && data.status in ['running', 'stopped', 'provisioning', 'rebooting', 'terminated']
+        && data.uptime247 is bool
+        && data.monthlyCostUsd is number && data.monthlyCostUsd >= 0 && data.monthlyCostUsd <= 50000
+        && data.workload is string && data.workload.size() >= 1 && data.workload.size() <= 160
+        && isValidStringList(data.tags, 12)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMcpServer(data) {
+      return data.keys().hasAll([
+          'ownerId', 'name', 'transport', 'endpoint', 'category',
+          'enabled', 'autoApprove', 'tools', 'description', 'invocations', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'name', 'transport', 'endpoint', 'category',
+          'enabled', 'autoApprove', 'tools', 'description', 'invocations', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 80
+        && data.transport is string && data.transport in ['sse', 'http-streamable', 'stdio-cloud']
+        && data.endpoint is string && data.endpoint.size() >= 3 && data.endpoint.size() <= 256
+        && data.category is string && data.category in ['infrastructure', 'terminal', 'database', 'ai-runtime', 'git-devops', 'network']
+        && data.enabled is bool
+        && data.autoApprove is bool
+        && isValidStringList(data.tools, 24)
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 280
+        && data.invocations is number && data.invocations >= 0 && data.invocations <= 10000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidWarrdcoreModel(data) {
+      return data.keys().hasAll([
+          'ownerId', 'name', 'warrdcoreUri', 'endpointUrl', 'architecture',
+          'quantization', 'contextWindow', 'targetNode', 'keepAlive247',
+          'status', 'systemPrompt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'name', 'warrdcoreUri', 'endpointUrl', 'architecture',
+          'quantization', 'contextWindow', 'targetNode', 'keepAlive247',
+          'status', 'systemPrompt', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 96
+        && data.warrdcoreUri is string && data.warrdcoreUri.size() >= 5 && data.warrdcoreUri.size() <= 256
+        && data.endpointUrl is string && data.endpointUrl.size() <= 256
+        && data.architecture is string && data.architecture.size() >= 2 && data.architecture.size() <= 64
+        && data.quantization is string && data.quantization in ['Q4_K_M', 'Q6_K', 'Q8_0', 'FP16', 'BF16', 'GGUF-Custom']
+        && data.contextWindow is number && data.contextWindow >= 2048 && data.contextWindow <= 2000000
+        && data.targetNode is string && data.targetNode.size() >= 2 && data.targetNode.size() <= 80
+        && data.keepAlive247 is bool
+        && data.status is string && data.status in ['active', 'warming', 'standby', 'archived']
+        && data.systemPrompt is string && data.systemPrompt.size() <= 600
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDevEnvironment(data) {
+      return data.keys().hasAll([
+          'ownerId', 'name', 'deviceType', 'osRelease', 'shell', 'repoUrl',
+          'syncState', 'dotfilesRevision', 'packages', 'envProfile', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'name', 'deviceType', 'osRelease', 'shell', 'repoUrl',
+          'syncState', 'dotfilesRevision', 'packages', 'envProfile', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 80
+        && data.deviceType is string && data.deviceType in ['termux-android', 'ubuntu-linux', 'cloud-container', 'workstation']
+        && data.osRelease is string && data.osRelease.size() >= 2 && data.osRelease.size() <= 64
+        && data.shell is string && data.shell in ['zsh', 'bash', 'fish']
+        && data.repoUrl is string && data.repoUrl.size() <= 256
+        && data.syncState is string && data.syncState in ['synced', 'syncing', 'drift', 'paused']
+        && data.dotfilesRevision is string && data.dotfilesRevision.size() >= 2 && data.dotfilesRevision.size() <= 32
+        && isValidStringList(data.packages, 24)
+        && data.envProfile is string && data.envProfile.size() <= 400
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidInfraResource(data) {
+      return data.keys().hasAll([
+          'ownerId', 'kind', 'name', 'provider', 'target', 'spec', 'enabled', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'kind', 'name', 'provider', 'target', 'spec', 'enabled', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.kind is string && data.kind in ['firewall', 'floating-ip', 'vpc', 'snapshot', 'volume', 'oauth-connector', 'ssh-key', 'daemon-247']
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 96
+        && data.provider is string && data.provider in ['hetzner', 'digitalocean', 'cloudflare', 'github', 'tailscale', 'warrdcore', 'montana-mesh']
+        && data.target is string && data.target.size() >= 1 && data.target.size() <= 128
+        && data.spec is string && data.spec.size() >= 1 && data.spec.size() <= 320
+        && data.enabled is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAiAuditLog(data) {
+      return data.keys().hasAll(['ownerId', 'modelUsed', 'prompt', 'summary', 'mcpToolsExecuted', 'status', 'createdAt'])
+        && data.keys().hasOnly(['ownerId', 'modelUsed', 'prompt', 'summary', 'mcpToolsExecuted', 'status', 'createdAt'])
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.modelUsed is string && data.modelUsed.size() >= 2 && data.modelUsed.size() <= 96
+        && data.prompt is string && data.prompt.size() >= 1 && data.prompt.size() <= 1200
+        && data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 2400
+        && isValidStringList(data.mcpToolsExecuted, 24)
+        && data.status is string && data.status in ['completed', 'failed']
+        && data.createdAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // PII Isolation: Strictly owner-only get/create/update; no list allowed.
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if false;
+      allow create: if isVerified() && isValidId(userId) && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified() && isValidId(userId) && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().role == existing().role
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() || (
+            isOwner(userId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredRegion', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    // Cloud Nodes (24/7 Hetzner / DigitalOcean / WarrdCore Servers)
+    match /nodes/{nodeId} {
+      allow get: if isValidId(nodeId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(nodeId)
+        && isValidCloudNode(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified() && isValidId(nodeId)
+        && isValidCloudNode(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() || (
+            isOwner(existing().ownerId) &&
+            existing().status != 'terminated' && (
+              // Action: Power State & 24/7 Toggle
+              incoming().diff(existing()).affectedKeys().hasOnly(['status', 'uptime247', 'updatedAt']) ||
+              // Action: Resize / Plan & Workload Update
+              incoming().diff(existing()).affectedKeys().hasOnly(['plan', 'vcpu', 'ramGb', 'diskGb', 'monthlyCostUsd', 'workload', 'tags', 'updatedAt'])
+            )
+          )
+        );
+      allow delete: if isVerified() && isValidId(nodeId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    // MCP Servers
+    match /mcpServers/{serverId} {
+      allow get: if isValidId(serverId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(serverId)
+        && isValidMcpServer(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified() && isValidId(serverId)
+        && isValidMcpServer(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() || (
+            isOwner(existing().ownerId) && (
+              // Action: Toggle Enable / Auto-Approve
+              incoming().diff(existing()).affectedKeys().hasOnly(['enabled', 'autoApprove', 'updatedAt']) ||
+              // Action: Increment Invocation Counter
+              incoming().diff(existing()).affectedKeys().hasOnly(['invocations', 'updatedAt']) ||
+              // Action: Configure Endpoint & Tools
+              incoming().diff(existing()).affectedKeys().hasOnly(['name', 'endpoint', 'transport', 'tools', 'description', 'updatedAt'])
+            )
+          )
+        );
+      allow delete: if isVerified() && isValidId(serverId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    // WarrdCore Imported Custom AI Models
+    match /warrdcoreModels/{modelId} {
+      allow get: if isValidId(modelId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(modelId)
+        && isValidWarrdcoreModel(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified() && isValidId(modelId)
+        && isValidWarrdcoreModel(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() || (
+            isOwner(existing().ownerId) &&
+            existing().status != 'archived' && (
+              // Action: Runtime Status & 24/7 Keep-Alive
+              incoming().diff(existing()).affectedKeys().hasOnly(['status', 'keepAlive247', 'updatedAt']) ||
+              // Action: Update Inference Config
+              incoming().diff(existing()).affectedKeys().hasOnly(['endpointUrl', 'targetNode', 'quantization', 'contextWindow', 'systemPrompt', 'updatedAt'])
+            )
+          )
+        );
+      allow delete: if isVerified() && isValidId(modelId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    // Cloud Synced Development Environments (Termux, Ubuntu, Workstations)
+    match /devEnvs/{envId} {
+      allow get: if isValidId(envId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(envId)
+        && isValidDevEnvironment(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified() && isValidId(envId)
+        && isValidDevEnvironment(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() || (
+            isOwner(existing().ownerId) && (
+              // Action: Cloud Sync Trigger
+              incoming().diff(existing()).affectedKeys().hasOnly(['syncState', 'dotfilesRevision', 'updatedAt']) ||
+              // Action: Update Environment Profile & Packages
+              incoming().diff(existing()).affectedKeys().hasOnly(['shell', 'repoUrl', 'packages', 'envProfile', 'syncState', 'dotfilesRevision', 'updatedAt'])
+            )
+          )
+        );
+      allow delete: if isVerified() && isValidId(envId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    // Hetzner & DigitalOcean Enterprise Infrastructure Tools & Connectors
+    match /infraResources/{resourceId} {
+      allow get: if isValidId(resourceId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(resourceId)
+        && isValidInfraResource(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified() && isValidId(resourceId)
+        && isValidInfraResource(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() || (
+            isOwner(existing().ownerId) && (
+              // Action: Toggle Resource Active State
+              incoming().diff(existing()).affectedKeys().hasOnly(['enabled', 'updatedAt']) ||
+              // Action: Update Target & Spec
+              incoming().diff(existing()).affectedKeys().hasOnly(['name', 'target', 'spec', 'enabled', 'updatedAt'])
+            )
+          )
+        );
+      allow delete: if isVerified() && isValidId(resourceId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+
+    // Append-Only AI & MCP Audit Logs
+    match /aiLogs/{logId} {
+      allow get: if isValidId(logId) && (isOwner(existing().ownerId) || isAdmin());
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(logId)
+        && isValidAiAuditLog(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(logId) && (isOwner(existing().ownerId) || isAdmin());
+    }
+  }
+}

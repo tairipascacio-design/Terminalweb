@@ -1,0 +1,6 @@
+{
+  "name": "Montana Cloud",
+  "description": "Executive 24/7 cloud infrastructure control plane inspired by Hetzner & DigitalOcean, featuring a Termux & Ubuntu Linux web terminal, MCP server orchestration, cloud dev-environment sync, and Gemini + WarrdCore AI command automation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

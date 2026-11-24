@@ -1,0 +1,237 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private executive operator profile isolated per authenticated user.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "minLength": 3, "maxLength": 254 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["operator"] },
+        "preferredRegion": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "preferredRegion", "createdAt", "updatedAt"]
+    },
+    "CloudNode": {
+      "title": "CloudNode",
+      "description": "Dedicated 24/7 cloud server or droplet (Hetzner, DigitalOcean, or WarrdCore Bare-Metal).",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "provider": { "type": "string", "enum": ["hetzner", "digitalocean", "warrdcore-cloud"] },
+        "plan": { "type": "string", "minLength": 2, "maxLength": 48 },
+        "region": { "type": "string", "minLength": 2, "maxLength": 48 },
+        "osImage": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "ipv4": { "type": "string", "minLength": 7, "maxLength": 45 },
+        "privateIp": { "type": "string", "minLength": 7, "maxLength": 45 },
+        "vcpu": { "type": "number" },
+        "ramGb": { "type": "number" },
+        "diskGb": { "type": "number" },
+        "status": { "type": "string", "enum": ["running", "stopped", "provisioning", "rebooting", "terminated"] },
+        "uptime247": { "type": "boolean" },
+        "monthlyCostUsd": { "type": "number" },
+        "workload": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "tags": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "name",
+        "provider",
+        "plan",
+        "region",
+        "osImage",
+        "ipv4",
+        "privateIp",
+        "vcpu",
+        "ramGb",
+        "diskGb",
+        "status",
+        "uptime247",
+        "monthlyCostUsd",
+        "workload",
+        "tags",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "McpServer": {
+      "title": "McpServer",
+      "description": "Model Context Protocol (MCP) server endpoint, transport, and exposed tool definitions.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "transport": { "type": "string", "enum": ["sse", "http-streamable", "stdio-cloud"] },
+        "endpoint": { "type": "string", "minLength": 3, "maxLength": 256 },
+        "category": { "type": "string", "enum": ["infrastructure", "terminal", "database", "ai-runtime", "git-devops", "network"] },
+        "enabled": { "type": "boolean" },
+        "autoApprove": { "type": "boolean" },
+        "tools": { "type": "array" },
+        "description": { "type": "string", "minLength": 1, "maxLength": 280 },
+        "invocations": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "name",
+        "transport",
+        "endpoint",
+        "category",
+        "enabled",
+        "autoApprove",
+        "tools",
+        "description",
+        "invocations",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WarrdcoreModel": {
+      "title": "WarrdcoreModel",
+      "description": "Imported custom AI model from WarrdCore running on 24/7 dedicated infrastructure.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 96 },
+        "warrdcoreUri": { "type": "string", "minLength": 5, "maxLength": 256 },
+        "endpointUrl": { "type": "string", "maxLength": 256 },
+        "architecture": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "quantization": { "type": "string", "enum": ["Q4_K_M", "Q6_K", "Q8_0", "FP16", "BF16", "GGUF-Custom"] },
+        "contextWindow": { "type": "number" },
+        "targetNode": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "keepAlive247": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "warming", "standby", "archived"] },
+        "systemPrompt": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "name",
+        "warrdcoreUri",
+        "endpointUrl",
+        "architecture",
+        "quantization",
+        "contextWindow",
+        "targetNode",
+        "keepAlive247",
+        "status",
+        "systemPrompt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DevEnvironment": {
+      "title": "DevEnvironment",
+      "description": "Synchronized cloud development environment across Termux, Ubuntu Linux, and workstations.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "deviceType": { "type": "string", "enum": ["termux-android", "ubuntu-linux", "cloud-container", "workstation"] },
+        "osRelease": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "shell": { "type": "string", "enum": ["zsh", "bash", "fish"] },
+        "repoUrl": { "type": "string", "maxLength": 256 },
+        "syncState": { "type": "string", "enum": ["synced", "syncing", "drift", "paused"] },
+        "dotfilesRevision": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "packages": { "type": "array" },
+        "envProfile": { "type": "string", "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "name",
+        "deviceType",
+        "osRelease",
+        "shell",
+        "repoUrl",
+        "syncState",
+        "dotfilesRevision",
+        "packages",
+        "envProfile",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "InfraResource": {
+      "title": "InfraResource",
+      "description": "Hetzner & DigitalOcean enterprise tools: Firewalls, Floating IPs, VPCs, Snapshots, Volumes, OAuth Connectors, 24/7 Daemons.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "kind": { "type": "string", "enum": ["firewall", "floating-ip", "vpc", "snapshot", "volume", "oauth-connector", "ssh-key", "daemon-247"] },
+        "name": { "type": "string", "minLength": 2, "maxLength": 96 },
+        "provider": { "type": "string", "enum": ["hetzner", "digitalocean", "cloudflare", "github", "tailscale", "warrdcore", "montana-mesh"] },
+        "target": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "spec": { "type": "string", "minLength": 1, "maxLength": 320 },
+        "enabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId",
+        "kind",
+        "name",
+        "provider",
+        "target",
+        "spec",
+        "enabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AiAuditLog": {
+      "title": "AiAuditLog",
+      "description": "Immutable log of AI Command Center & MCP autonomous tool executions.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "modelUsed": { "type": "string", "minLength": 2, "maxLength": 96 },
+        "prompt": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 2400 },
+        "mcpToolsExecuted": { "type": "array" },
+        "status": { "type": "string", "enum": ["completed", "failed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "modelUsed", "prompt", "summary", "mcpToolsExecuted", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private operator profile strictly accessible by the authenticated owner or admin."
+    },
+    "/nodes/{nodeId}": {
+      "schema": { "$ref": "#/entities/CloudNode" },
+      "description": "24/7 Cloud Servers and Droplets owned by the operator."
+    },
+    "/mcpServers/{serverId}": {
+      "schema": { "$ref": "#/entities/McpServer" },
+      "description": "Registered MCP servers and autonomous tools owned by the operator."
+    },
+    "/warrdcoreModels/{modelId}": {
+      "schema": { "$ref": "#/entities/WarrdcoreModel" },
+      "description": "Custom WarrdCore AI models deployed on 24/7 infrastructure."
+    },
+    "/devEnvs/{envId}": {
+      "schema": { "$ref": "#/entities/DevEnvironment" },
+      "description": "Synced Termux, Ubuntu, and cloud dev environments."
+    },
+    "/infraResources/{resourceId}": {
+      "schema": { "$ref": "#/entities/InfraResource" },
+      "description": "Firewalls, Floating IPs, VPCs, Snapshots, Volumes, OAuth connectors, SSH keys, and 24/7 daemons."
+    },
+    "/aiLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AiAuditLog" },
+      "description": "Append-only AI & MCP execution audit logs owned by the operator."
+    }
+  }
+}
