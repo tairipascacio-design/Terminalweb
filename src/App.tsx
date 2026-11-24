@@ -25,6 +25,7 @@ import { TerminalSection } from './components/TerminalSection';
 import { McpSection, WarrdcoreSection } from './components/McpAndWarrdcoreSection';
 import { DevEnvsSection, InfraSection } from './components/DevEnvsAndInfraSection';
 import { AiCommanderSection } from './components/AiCommanderSection';
+import { OfflineIndicator, PWAInstallButton } from './components/NativeInstallModal';
 import { useCloudState } from './hooks/useCloudState';
 import { ActiveSection } from './types/cloud';
 
@@ -112,6 +113,11 @@ function WorkspaceApp() {
           })}
         </nav>
 
+        {/* Install Native App Action */}
+        <div className="px-4 pb-3">
+          <PWAInstallButton variant="sidebar" />
+        </div>
+
         {/* Operator Profile Footer */}
         <div className="p-4 border-t border-zinc-800/90 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -174,7 +180,8 @@ function WorkspaceApp() {
                 );
               })}
             </nav>
-            <div className="p-4 border-t border-zinc-800">
+            <div className="p-4 border-t border-zinc-800 space-y-2.5">
+              <PWAInstallButton variant="sidebar" />
               <button
                 type="button"
                 onClick={cloud.logout}
@@ -337,6 +344,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <WorkspaceApp />
+      <OfflineIndicator />
     </ErrorBoundary>
   );
 }

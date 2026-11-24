@@ -1,4 +1,5 @@
 import { ShieldCheck, Terminal, Cpu, Globe } from 'lucide-react';
+import { PWAInstallButton } from './NativeInstallModal';
 
 interface AuthGateProps {
   onLogin: () => Promise<void>;
@@ -45,7 +46,7 @@ export function AuthGate({ onLogin, error }: AuthGateProps) {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 pt-1">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <button
               type="button"
               onClick={onLogin}
@@ -53,10 +54,11 @@ export function AuthGate({ onLogin, error }: AuthGateProps) {
             >
               Iniciar sesión con Google
             </button>
-            <span className="text-xs text-zinc-500">
-              Acceso protegido con aislamiento estricto de datos por operador
-            </span>
+            <PWAInstallButton variant="inline" />
           </div>
+          <p className="text-xs text-zinc-500">
+            Acceso protegido con aislamiento estricto de datos por operador
+          </p>
 
           {error && (
             <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/60 rounded-lg px-4 py-3">
